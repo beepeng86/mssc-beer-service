@@ -2,8 +2,10 @@ package guru.springframework.msscbeerservice.services.order;
 
 import guru.sfg.brewery.model.events.ValidateOrderRequest;
 import guru.sfg.brewery.model.events.ValidateOrderResult;
-import guru.springframework.msscbeerservice.config.JmsConfig;
+import guru.springframework.msscbeerservice.config.RabbitmqConfig;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -16,13 +18,13 @@ import org.springframework.stereotype.Component;
 public class BeerOrderValidationListener {
 
     private final BeerOrderValidator validator;
-    private final JmsTemplate jmsTemplate;
+    private final RabbitTemplate rabbitTemplate;
 
-    @JmsListener(destination = JmsConfig.VALIDATE_ORDER_QUEUE)
-    public void listen(ValidateOrderRequest validateOrderRequest){
+    @RabbitListener(queues = RabbitmqConfig.VALIDATE_ORDER_QUEUE)
+    public void receiveMessage(ValidateOrderRequest validateOrderRequest){
         Boolean isValid = validator.validateOrder(validateOrderRequest.getBeerOrder());
 
-        jmsTemplate.convertAndSend(JmsConfig.VALIDATE_ORDER_RESPONSE_QUEUE,
+        rabbitTemplate.convertAndSend("spring-boot-exchange", RabbitmqConfig.VALIDATE_ORDER_RESPONSE_QUEUE,
                 ValidateOrderResult.builder()
                     .isValid(isValid)
                     .orderId(validateOrderRequest.getBeerOrder().getId())
